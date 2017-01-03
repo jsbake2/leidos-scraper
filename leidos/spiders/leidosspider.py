@@ -1,4 +1,5 @@
 import time
+from time import sleep
 from scrapy.spiders import CrawlSpider, Rule
 from scrapy.contrib.linkextractors import LinkExtractor
 from scrapy.selector import Selector
@@ -9,6 +10,8 @@ import json
 import re
 from scrapy.exceptions import CloseSpider
 
+L = open('parseInfo', 'w')
+
 
 class LeidosSpider(CrawlSpider):
     name = "leidosJobStart"
@@ -16,26 +19,29 @@ class LeidosSpider(CrawlSpider):
     ajaxURL = "http://jobs.leidos.com/ListJobs/All/Page-"
 
     def start_requests(self):
-        yield Request(self.ajaxURL + str(self.page), callback=self.parse_listings)
+      yield Request(self.ajaxURL + str(self.page), callback=self.parse_listings , headers={'Referer':(self.ajaxURL + str(self.page))})
 
     def parse_listings(self, response):
-        print("This is the start of the pull from this web address: "+str(response))
-        #resp = json.loads(response.body)
-        #response = Selector(text = resp['jobListings'])
+        c = 0
         jobs = response.xpath('//*[@class="coljobtitle"]/a/@href').extract()
-        if jobs:
-            for job_url in jobs:
-                if re.search('ShowJob', job_url):
-                  job_url = 'http://jobs.leidos.com' + job_url
-                  job_url = self.__normalise(job_url)
-                  yield Request(url=job_url, callback=self.parse_details)
-        else:
-            raise CloseSpider("No more pages... exiting...")
+        L.write(str(len(jobs))+'  -  '+str(self.page)+'\n')
+
+        for job_url in jobs:
+          if re.search('ShowJob', job_url):
+            c += 1
+            L.write("\tGenerated URL for job #: "+str(c)+'\n')
+            job_url = 'http://jobs.leidos.com' + job_url
+            job_url = self.__normalise(job_url)
+            yield Request(url=job_url, callback=self.parse_details)
+
         # go to next page...
-        self.page = self.page + 1
-        if self.page == 108:
-          raise CloseSpider("No more pages... exiting...")
-        yield Request(self.ajaxURL + str(self.page), callback=self.parse_listings)
+        self.page += 1
+        #sleep(30)
+        if self.page == 107:
+          L.write("Just  hit the magic number.. finishing up now!")
+          #raise CloseSpider("No more pages... exiting...")
+        else:
+          yield Request(self.ajaxURL + str(self.page), callback=self.parse_listings, headers={'Referer':(self.ajaxURL + str(self.page))})
 
 
     def parse_details(self, response):
@@ -54,6 +60,8 @@ class LeidosSpider(CrawlSpider):
       item['job_number'] = job.xpath('//*[@id="mainbody-jobs"]/div[3]/div[2]/div[1]/div/div[1]/div[2]/text()').extract()
       item['page_url'] = response.url
       item = self.__normalise_item(item, response.url)
+      #sleep(1)
+      L.write((str(item['page_url']))+"\n")
       return item
 
     def __normalise_item(self, item, base_url):
