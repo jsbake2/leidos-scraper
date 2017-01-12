@@ -13,6 +13,17 @@ from scrapy.exceptions import CloseSpider
 L = open('parseInfo', 'w')
 
 
+def stripUnicode(unimess):
+  if re.search('list',str(type(unimess))):
+    if len(unimess) >= 1:
+      return unimess[0].encode('utf-8').strip()
+    else:
+      return unimess
+  elif (re.search('str|uni', unimess)):
+    return unimess.encode('utf-8').strip()
+  else:
+    return unimess
+    
 class LeidosSpider(CrawlSpider):
     name = "leidosJobStart"
     page = 1
@@ -37,13 +48,14 @@ class LeidosSpider(CrawlSpider):
         # go to next page...
         self.page += 1
         #sleep(30)
-        if self.page == 107:
+        if self.page == 108:
           L.write("Just  hit the magic number.. finishing up now!")
           #raise CloseSpider("No more pages... exiting...")
         else:
           yield Request(self.ajaxURL + str(self.page), callback=self.parse_listings, headers={'Referer':(self.ajaxURL + str(self.page))})
 
 
+    
     def parse_details(self, response):
       sel = Selector(response)
       job = sel.xpath('//*[@id="mainbody-jobs"]')
@@ -60,9 +72,18 @@ class LeidosSpider(CrawlSpider):
       item['job_number'] = job.xpath('//*[@id="mainbody-jobs"]/div[3]/div[2]/div[1]/div/div[1]/div[2]/text()').extract()
       item['page_url'] = response.url
       item = self.__normalise_item(item, response.url)
-      #sleep(1)
+      item['title'] = stripUnicode(item['title'])
+      item['location'] = stripUnicode(item['location'])
+      item['description'] = stripUnicode(item['description'])
+      item['travel'] = stripUnicode(item['travel'])
+      item['job_category'] = stripUnicode(item['job_category'])
+      item['clearance_have'] = stripUnicode(item['clearance_have'])
+      item['clearance_get'] = stripUnicode(item['clearance_get'])
+      item['job_number'] = stripUnicode(item['job_number'])
       L.write((str(item['page_url']))+"\n")
       return item
+
+
 
     def __normalise_item(self, item, base_url):
       '''

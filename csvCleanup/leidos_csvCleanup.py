@@ -8,6 +8,8 @@ import locations
 from locations import parser
 import clearances
 from clearances import clearance as clear
+import asciiClean
+from asciiClean import ascii_clean
 from sys import argv
 import datetime
 #  clearance,description,title,reqid,loclink,location,clearanceAndJunk
@@ -37,6 +39,8 @@ csv.register_dialect(
   lineterminator='\r\n',
   quoting=csv.QUOTE_MINIMAL)
 
+def asciiCleanup():
+  print 'done'
 
 wr.writerow(['title', 'apply_url', 'job_description', 'location', 'company_name', 'company_description', 'company_website', 'company_logo', 'company_facebook', 'company_twitter', 'company_linkedin', 'career_id', 'deployment', 'travel', 'job_lat', 'job_lon', 'company_benefits', 'job_category', 'clearance', 'keywords'])
 
@@ -82,6 +86,12 @@ with open(csvFile, 'rb') as mycsv:
       loc,lat,lon,keywordsLoc = parser.loc(loc,"leidos")
       keyw = keyw + ' ' + keywordsLoc
       #print loc + ' ||||||||||||| THIS IS FUCKED UP ||||||||||||| ' + keywordsLoc
+      
+      finalList = [title, appUrl, desc, loc, infoComp, infoDesc, infoSite, infoLogo, infoFace, infoTwit, infoLinked, req, 'UNKNOWN', travel, lat, lon, infoBeni, job_c, clearance, keyw]
+
+      for a in range(len(finalList)):
+        finalList[a] = ascii_clean.cleanUp(finalList[a])
+      
       if not re.match("None|^$", clearance):
-        wr.writerow([title, appUrl, desc, loc, infoComp, infoDesc, infoSite, infoLogo, infoFace, infoTwit, infoLinked, req, 'UNKNOWN', travel, lat, lon, infoBeni, job_c, clearance, keyw])
+        wr.writerow(finalList)
 
